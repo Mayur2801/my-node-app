@@ -1,8 +1,14 @@
-function add(a, b) {
-  return a + b;
-}
+const http = require('http');
 
-// Example usage
-console.log("2 + 3 =", add(2, 3));
+const hostname = '0.0.0.0';
+const port = 3000;
 
-module.exports = { add };
+const server = http.createServer((req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('Hello World\n');
+});
+
+server.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}/`);
+});
