@@ -15,18 +15,21 @@ jobs:
 
       - name: Set up SSH key
         run: |
-          echo "${{ secrets.EC2_KEY }}" | base64 -d > ${{ secrets.EC2_KEY_NAME }}
-          chmod 600 ${{ secrets.EC2_KEY_NAME }}
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > "${{ secrets.EC2_KEY_NAME }}"
+          chmod 600 "${{ secrets.EC2_KEY_NAME }}"
+
+      - name: Test SSH connectivity
+        run: |
+          ssh -o StrictHostKeyChecking=no -i "${{ secrets.EC2_KEY_NAME }}" "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" "echo SSH connection successful"
 
       - name: Copy app files to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY_NAME }} ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
-          scp -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY_NAME }} index.js ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/app/index.js
+          ssh -o StrictHostKeyChecking=no -i "${{ secrets.EC2_KEY_NAME }}" "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" "mkdir -p ~/app"
+          scp -o StrictHostKeyChecking=no -i "${{ secrets.EC2_KEY_NAME }}" index.js "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":~/app/index.js
 
       - name: Install Node.js on EC2 (if needed) and run server
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY_NAME }} ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            # Install Node.js if not installed
+          ssh -o StrictHostKeyChecking=no -i "${{ secrets.EC2_KEY_NAME }}" "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
             if ! command -v node > /dev/null; then
               if [ -f /etc/debian_version ]; then
                 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -37,9 +40,6 @@ jobs:
               fi
             fi
 
-            # Kill any process on port 3000 to avoid conflicts
             sudo lsof -t -i tcp:3000 | xargs -r kill -9
-
-            # Start the server in background
             nohup node ~/app/index.js > ~/app/server.log 2>&1 &
           EOF
